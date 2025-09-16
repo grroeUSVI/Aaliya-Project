@@ -1,0 +1,180 @@
+---
+title: "Basic Plots"
+output: html_document
+date: "2025-08-26"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+library(readr)
+library(tidyverse)
+library(lubridate)
+
+#import data
+roots<- read_csv("Root Experiment Monitoring Sheet - GEN MON (1).csv")
+
+
+#make R recognize Date Monitored as a Date
+roots$`DATE MONITORED?`<-mdy(roots$`DATE MONITORED?`)
+
+rootscheck <- roots%>%
+  separate(`TAG ID`, into = c( "Treatment", "TagNumber"), sep = " ")%>%
+  select(`DATE MONITORED?`, Treatment,TagNumber,`EPICOTYL HEIGHT (cm)`)%>%
+    pivot_wider(names_from = `DATE MONITORED?`, values_from = `EPICOTYL HEIGHT (cm)`)
+#we have dates where we do not have all of the trees measured 8/6, removing 8/6
+
+
+#select columns we need, remove 8/6 because we are missing data from here
+roots <- roots%>%
+  separate(`TAG ID`, into = c( "Treatment", "TagNumber"), sep = " ")%>%
+  select(`DATE MONITORED?`, Treatment,TagNumber,`EPICOTYL HEIGHT (cm)`)%>%
+  filter(`DATE MONITORED?`!="2025-08-06")
+
+
+#pivot wider to check we have data for all the dates (after we removed 8/6 it looks good!)
+roots1<-roots%>%
+  pivot_wider(names_from = `DATE MONITORED?`, values_from = `EPICOTYL HEIGHT (cm)`)%>%
+  unnest(cols = everything())
+
+#look at the height of all the trees over time
+
+height<-roots%>%
+  ggplot(aes(x=`DATE MONITORED?`, y=`EPICOTYL HEIGHT (cm)`, colour=TagNumber))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~Treatment)
+
+height
+
+
+#these heights look kinda crazy going up and down over time, going to look at the absolute change in height and compare that across treatments using a boxplot
+
+heightchangeboxplot<-roots1%>%
+  mutate(heightchange7.30=`2025-07-30`- `2025-06-04`)%>%
+   ggplot(aes(x=Treatment,y=heightchange7.30))+
+  geom_boxplot()+
+  geom_jitter()
+
+heightchangeboxplot
+
+
+
+meanepichange<-roots1%>%
+  mutate(heightchange7.30=`2025-07-30`- `2025-06-04`)%>%
+  group_by(Treatment)%>%
+  summarise(Mean=mean(heightchange7.30), sd(heightchange7.30))
+
+
+
+
+
+#his is things that need to be explored later!!!!!!
+#CR june 11th heigths are crazy talk.. removing them
+
+rootspull<-roots%>%
+  filter(!(`DATE MONITORED?`=="2025-06-11"& Treatment=="CR"))
+
+height1<-rootspull%>%
+  ggplot(aes(x=`DATE MONITORED?`, y=`EPICOTYL HEIGHT (cm)`, colour=TagNumber))+
+  geom_point()+
+  geom_line()+
+  ylab("Epicotyl Height (cm)")+
+  xlab("Date Monitored")+
+  facet_wrap(~Treatment)
+
+height1
+
+#look at problem plants
+check<-roots1%>%
+  filter(Treatment=="UR"&TagNumber=="10")
+
+
+roots2<-roots1%>%
+  mutate("6-11-2025"=(`2025-06-11`- `2025-06-04`), "6-18-2025"=(`2025-06-18`- `2025-06-04`), "6-26-2025"=(`2025-06-26`- `2025-06-04`), "7-16-2025"=(`2025-07-16`-`2025-06-04`),"7-23-2025"=(`2025-07-23`- `2025-06-04`),"7-30-2025"=(`2025-07-30`- `2025-06-04`))
+
+
+
+
+
+
+rootsplot<-roots2%>%
+  select(Treatment, TagNumber, `6-11-2025`,`6-18-2025`,`6-26-2025`,`7-16-2025`,`7-23-2025`,`7-30-2025`)%>%
+  pivot_longer(cols=`6-11-2025`:`7-30-2025`,names_to = "Date", values_to = "EpiLength")%>%
+  group_by(Treatment, Date)%>%
+  summarise(mean=mean(EpiLength))
+
+rootsplot$Date<-mdy(rootsplot$Date)
+
+
+plotplot<-rootsplot%>%
+  ggplot(aes(x=Date, y=mean, color=Treatment))+
+  geom_line(size=1)+
+  geom_point()
+
+plotplot
+```
+
+```{r}
+
+#look at number of leaves
+
+leaves<- read_csv("Root Experiment Monitoring Sheet - GEN MON (1).csv")
+#two different date formats for 6/18/25 fixed so there is only one
+
+leaves<-leaves%>%
+mutate(`DATE MONITORED?`=recode(`DATE MONITORED?`,
+    "6/18/2025"= "6/18/25"))
+leaves$`DATE MONITORED?`<-mdy(leaves$`DATE MONITORED?`)
+
+
+
+#separate tag number and treatment 
+leaves <- leaves%>%
+  separate(`TAG ID`, into = c( "Treatment", "TagNumber"), sep = " ")%>%
+  filter(`DATE MONITORED?`!="2025-08-06")
+
+leaves$TagNumber<-as.factor(leaves$TagNumber)
+
+
+#plot leaves over time
+leavesplot<-leaves%>%
+ ggplot(aes(x=`DATE MONITORED?`, y=`TOTAL # OF LEAVES`, colour=TagNumber))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~Treatment)
+
+leavesplot
+
+
+
+
+
+#look to see if there is an increase in the number of leaves over time
+
+leavestime <- leaves%>%
+   select(`DATE MONITORED?`, Treatment,TagNumber,`TOTAL # OF LEAVES`)%>%
+  pivot_wider(names_from = `DATE MONITORED?`, values_from =`TOTAL # OF LEAVES`)%>%
+  ungroup()
+
+
+#look at change in number of leaves over the monitoring period
+leavestimeplot<-leavestime%>%
+  mutate(LeafChange=`2025-07-30`-`2025-06-04`)%>%
+  ggplot(aes(x=Treatment,y=LeafChange))+
+  geom_boxplot()+
+  geom_jitter()
+  
+
+leavestimeplot
+
+meanleaves<-leavestime%>%
+  mutate(LeafChange=`2025-07-30`-`2025-06-04`)%>%
+  group_by(Treatment)%>%
+  summarise(Mean=mean(LeafChange), sd(LeafChange))
+
+
+
+```
+
