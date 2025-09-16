@@ -6,6 +6,16 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+
+```{r Connect with Github}
+library(usethis)
+use_git()
+use_github()
+
+```
+
+
 ```{r setup, include=FALSE}
 
 library(readr)
