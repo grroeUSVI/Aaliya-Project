@@ -9,9 +9,10 @@ editor_options:
 
 
 ```{r Connect with Github}
-library(usethis)
-use_git()
-use_github()
+#library(usethis)#this is the package that gets r to talk to git, the software in your computer and github the online platform
+
+#use_git()#gives you a git tab in your r, so you can commit changes to git 
+#use_github()#after you have git, you can connect to github which will create a repository for the 
 
 ```
 
